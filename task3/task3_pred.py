@@ -113,7 +113,7 @@ def call_disrpt_eval(gold_path, pred_path, dataset_name):
     try:
         # Run the evaluation script
         cmd = [
-            'python', 'disrpt_eval_2024.py',
+            'python', '../sharedtask2025/utils/disrpt_eval_2024.py',
             '-g', gold_path,
             '-p', pred_path,
             '-t', 'R'  # Relations task
@@ -127,7 +127,7 @@ def call_disrpt_eval(gold_path, pred_path, dataset_name):
         
         # Parse JSON output
         eval_results = json.loads(result.stdout)
-        
+        print(eval_results)
         logger.info(f"\n{'='*60}")
         logger.info(f"DISRPT EVALUATION RESULTS - {dataset_name}")
         logger.info(f"{'='*60}")
@@ -135,12 +135,12 @@ def call_disrpt_eval(gold_path, pred_path, dataset_name):
         logger.info(f"Gold count: {eval_results['labels_gold_count']}")
         logger.info(f"Pred count: {eval_results['labels_pred_count']}")
         
-        if 'labels_classification_report' in eval_results:
-            logger.info("\nPer-label Classification Report:")
-            report = eval_results['labels_classification_report']
-            for label, metrics in report.items():
-                if label not in ['accuracy', 'macro avg', 'weighted avg']:
-                    logger.info(f"  {label}: P={metrics['precision']:.4f}, R={metrics['recall']:.4f}, F1={metrics['f1-score']:.4f}")
+        # if 'labels_classification_report' in eval_results:
+        #     logger.info("\nPer-label Classification Report:")
+        #     report = eval_results['labels_classification_report']
+        #     for label, metrics in report.items():
+        #         if label not in ['accuracy', 'macro avg', 'weighted avg']:
+        #             logger.info(f"  {label}: P={metrics['precision']:.4f}, R={metrics['recall']:.4f}, F1={metrics['f1-score']:.4f}")
         
         logger.info(f"{'='*60}\n")
         
@@ -150,7 +150,7 @@ def call_disrpt_eval(gold_path, pred_path, dataset_name):
         logger.error(f"Error running evaluation for {dataset_name}: {e}")
         return None
 
-def process_dataset(model, processor, dataset_dir, predictions_dir, batch_size):
+def process_dataset(model, processor, dataset_dir, predictions_dir, batch_size, all_labels_str):
     """Process a single dataset directory"""
     dataset_name = os.path.basename(dataset_dir)
     logger.info(f"\n{'='*70}")
@@ -167,26 +167,26 @@ def process_dataset(model, processor, dataset_dir, predictions_dir, batch_size):
     logger.info(f"Found test file: {test_file}")
     
     # Load test data using rel_reader1
-    try:
-        test_df = rel_reader1(test_file)
-        
-        if test_df.empty:
-            logger.error(f"No data loaded from {test_file}")
-            return None
-        
-        test_df['label'] = test_df['label'].astype(str).str.strip()
-        test_df.dropna(subset=['label', 'unit1_txt', 'unit2_txt'], inplace=True)
-        test_df = test_df[test_df['label'] != '']
-        
-        all_labels = sorted(list(set(test_df['label'].tolist())))
-        all_labels_str = ", ".join([f"'{label}'" for label in all_labels])
-        
-        logger.info(f"Test set size: {len(test_df)}")
-        logger.info(f"Number of unique labels: {len(all_labels)}")
-        
-    except Exception as e:
-        logger.error(f"Error loading data from {dataset_dir}: {e}")
+    # try:
+    content = rel_reader1(test_file)
+    test_df = pd.DataFrame(content, columns=['doc', 'unit1_toks', 'unit1_txt', 'unit2_toks', 'unit2_txt', 'unit1_snt', 'unit2_snt', 'dir', 'label'])
+            
+    if test_df.empty:
+        logger.error(f"No data loaded from {test_file}")
         return None
+    
+    test_df['label'] = test_df['label'].astype(str).str.strip()
+    test_df.dropna(subset=['label', 'unit1_txt', 'unit2_txt'], inplace=True)
+    test_df = test_df[test_df['label'] != '']
+    
+    all_labels = sorted(list(set(test_df['label'].tolist())))
+    
+    logger.info(f"Test set size: {len(test_df)}")
+    # logger.info(f"Number of unique labels: {len(all_labels_str)}")
+        
+    # except Exception as e:
+    #     logger.error(f"Error loading data from {dataset_dir}: {e}")
+    #     return None
     
     # Create prompts
     prompts = []
@@ -219,12 +219,12 @@ Respond with ONLY a JSON object: {{"label": "your_classification"}}"""
     accuracy = accuracy_score(true_labels, predictions)
     f1 = f1_score(true_labels, predictions, average='weighted', labels=all_labels, zero_division=0)
     
-    logger.info(f"\n{'='*60}")
-    logger.info(f"SKLEARN METRICS - {dataset_name}")
-    logger.info(f"{'='*60}")
-    logger.info(f"Accuracy: {accuracy:.4f}")
-    logger.info(f"Weighted F1-Score: {f1:.4f}")
-    logger.info(f"Failed predictions (n/a): {predictions.count('n/a')}/{len(predictions)}")
+    # logger.info(f"\n{'='*60}")
+    # logger.info(f"SKLEARN METRICS - {dataset_name}")
+    # logger.info(f"{'='*60}")
+    # logger.info(f"Accuracy: {accuracy:.4f}")
+    # logger.info(f"Weighted F1-Score: {f1:.4f}")
+    # logger.info(f"Failed predictions (n/a): {predictions.count('n/a')}/{len(predictions)}")
     
     # Save predictions
     pred_path = os.path.join(predictions_dir, f"{dataset_name}_pred.rels")
@@ -233,7 +233,7 @@ Respond with ONLY a JSON object: {{"label": "your_classification"}}"""
     
     # Run DISRPT evaluation
     disrpt_results = None
-    if os.path.exists('disrpt_eval_2024.py'):
+    if os.path.exists('../sharedtask2025/utils/disrpt_eval_2024.py'):
         disrpt_results = call_disrpt_eval(test_file, pred_path, dataset_name)
     else:
         logger.warning("disrpt_eval_2024.py not found. Skipping DISRPT evaluation.")
@@ -293,6 +293,15 @@ def main(args):
     
     logger.info("Model loading complete!")
     
+    #get all labels
+    _, _, test_df = load_data_from_directory(args.data_dir)
+    test_df['label'] = test_df['label'].astype(str).str.strip()
+    test_df.dropna(subset=['label', 'unit1_txt', 'unit2_txt'], inplace=True)
+    test_df = test_df[test_df['label'] != '']
+    
+    all_labels = sorted(list(set(test_df['label'].tolist())))
+    all_labels_str = ", ".join([f"'{label}'" for label in all_labels])
+
     # 2. Create predictions directory
     predictions_dir = os.path.join(os.path.dirname(args.stage2_path), "predictions")
     os.makedirs(predictions_dir, exist_ok=True)
@@ -315,7 +324,7 @@ def main(args):
         if not os.path.isdir(dataset_dir):
             continue
             
-        results = process_dataset(model, processor, dataset_dir, predictions_dir, args.batch_size)
+        results = process_dataset(model, processor, dataset_dir, predictions_dir, args.batch_size, all_labels_str)
         if results:
             all_results.append(results)
     
