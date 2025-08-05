@@ -7,7 +7,7 @@
 
 ## To replicate the results from the paper
 
-python task2.py --use_focal_loss --ensemble_method attention --bf16 --tf32 --data_dir /path/to/sharedtask/data --output_dir output/directory/for/model 
+``python task2.py --use_focal_loss --ensemble_method attention --bf16 --tf32 --data_dir /path/to/sharedtask/data --output_dir output/directory/for/model`` 
 
 Note that the flags ``--bf16`` and ``--tf32`` were specifically used in our case because we had access to newer GPU like H200. If BF16 mixed precision training is not supported on the GPU you are running on, please use ``--fp16`` instead of ``--bf16``. You can also remove or keep ``--tf32``. However, ``bf16`` and ``--fp16`` are mutually exclusive and cannot be used together. In general, the code is optimized for the newer GPUs.
 

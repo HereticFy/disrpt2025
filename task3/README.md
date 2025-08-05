@@ -5,17 +5,17 @@
 
 
 # Train model For Stage 1
-python task3_sft1.py --data_dir /path/to/sharedtask/data/ --output_dir /path/to/store/model --batch_size 8 --grad_accum 2 --epochs 3
+``python task3_sft1.py --data_dir /path/to/sharedtask/data/ --output_dir /path/to/store/model --batch_size 8 --grad_accum 2 --epochs 3``
 
 Increase or decrease batch size and gradient accumulation in case you get OOM errors. The code is opitmized with flash attention for a newer GPU like H200.
 
 # Train model For Stage 2
-python task3_sft2.py --stage1_model_path path/to/stage1/final_model/ --rationale_path cots_train_data_qwen2.5_72b_hard_samples_COMPLETE.jsonl --epochs 1 --learning_rate 3e-5 --data_dir /path/to/sharedtask/data/
+``python task3_sft2.py --stage1_model_path path/to/stage1/final_model/ --rationale_path cots_train_data_qwen2.5_72b_hard_samples_COMPLETE.jsonl --epochs 1 --learning_rate 3e-5 --data_dir /path/to/sharedtask/data/``
 
-Link to the rationale file - url will go here
+Link to the [rationale file] (https://drive.google.com/file/d/1yB-ZgFlVk7-fiNskhEA2TAVBAA_1hr7O/view?usp=sharing)
 
 # Get Predictions
-python task3_pred.py --stage1_path path/to/stage1/final_model/ --stage2_path path/to/stage2/final_model/ --data_dir /path/to/sharedtask/data --merge_for_inference
+``python task3_pred.py --stage1_path path/to/stage1/final_model/ --stage2_path path/to/stage2/final_model/ --data_dir /path/to/sharedtask/data --merge_for_inference``
 
 The script also automatically calls disrpt_eval.py script in the utils folder. The file path is hard coded to ``"../sharedtask2025/utils/disrpt_eval_2024.py"``. If it needs to be changed, change **line 116** and **line 236** in the file. In case you want the predictions, it will be stored in the ``output_dir`` of stage 2 model under the folder name ``predictions``.
 
